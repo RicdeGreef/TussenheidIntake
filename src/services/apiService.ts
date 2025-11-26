@@ -1,7 +1,7 @@
 // src/services/apiService.ts
 
 // Dit is de URL van jouw live Supabase Edge Function
-// Zorg dat deze nog steeds klopt met jouw project!
+// Zorg dat deze URL klopt met jouw project!
 const API_ENDPOINT = "https://eixutpznmpctdwsxymvd.supabase.co/functions/v1/process-intake";
 
 export interface ExtractedData {
@@ -32,23 +32,20 @@ export async function processIntake(
   
   const formData = new FormData();
   
-  // Check of het audio of tekst is
+  // Slimme detectie: is het audio of tekst?
   if (input instanceof Blob) {
-      // Audio logica (bestandsnaam bepalen)
+      // Audio: Bepaal extensie voor Whisper
       let extension = 'webm'; 
-      if (input.type.includes('mp4') || input.type.includes('m4a')) {
-        extension = 'm4a'; 
-      } else if (input.type.includes('wav')) {
-        extension = 'wav';
-      } else if (input.type.includes('ogg')) {
-        extension = 'ogg';
-      }
+      if (input.type.includes('mp4') || input.type.includes('m4a')) extension = 'm4a'; 
+      else if (input.type.includes('wav')) extension = 'wav';
+      else if (input.type.includes('ogg')) extension = 'ogg';
+      
       const fileName = `recording.${extension}`;
       console.log(`Audio versturen als: ${fileName}`);
       formData.append('audio', input, fileName);
-  } else if (typeof input === 'string') {
-      // Tekst logica
-      console.log("Tekst bericht versturen:", input);
+  } else {
+      // Tekst: Verstuur als string
+      console.log("Tekst versturen:", input);
       formData.append('textInput', input);
   }
   
@@ -76,7 +73,7 @@ export async function processIntake(
 }
 
 export async function playAudioResponse(base64Audio: string): Promise<void> {
-  if (!base64Audio) return; 
+  if (!base64Audio) return;
   
   return new Promise((resolve, reject) => {
     try {
@@ -85,8 +82,7 @@ export async function playAudioResponse(base64Audio: string): Promise<void> {
       audio.onended = () => resolve();
       audio.onerror = (e) => reject(e);
       audio.play().catch((e) => {
-        console.error("Audio play error:", e);
-        // We rejecten niet, zodat de flow doorgaat (tekst is er immers wel)
+        console.error("Audio play error (mogelijk autoplay block):", e);
         resolve();
       });
     } catch (e) {
